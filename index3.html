@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Access Pool</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --danger: #ef4444;
+            --success: #10b981;
+            --background: #f3f4f6;
+            --text: #1f2937;
+            --light-text: #6b7280;
+            --card: #ffffff;
+            --border: #e5e7eb;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        
+        header p {
+            color: var(--light-text);
+            font-size: 1.1rem;
+        }
+        
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            background-color: var(--card);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 3rem;
+        }
+        
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin-bottom: 1.5rem;
+        }
+        
+        .btn {
+            border: none;
+            color: white;
+            background-color: var(--primary);
+            padding: 1rem 2.5rem;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .upload-btn-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .file-info {
+            margin-top: 1rem;
+            color: var(--light-text);
+            text-align: center;
+        }
+        
+        .progress-container {
+            width: 100%;
+            max-width: 500px;
+            margin-top: 1.5rem;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 1rem;
+            background-color: var(--border);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            margin-top: 0.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--light-text);
+        }
+        
+        .files-timeline {
+            background-color: var(--card);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+        }
+        
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .timeline-header h2 {
+            font-size: 1.5rem;
+        }
+        
+        .file-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .file-card {
+            background-color: var(--background);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .file-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .file-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .file-size {
+            color: var(--light-text);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .file-date {
+            color: var(--light-text);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .download-btn {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: opacity 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: var(--card);
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-header h2 {
+            color: var(--danger);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--light-text);
+        }
+        
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+        
+        .cancel-btn {
+            background-color: var(--light-text);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3rem;
+            cursor: pointer;
+        }
+        
+        .confirm-btn {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3rem;
+            cursor: pointer;
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--border);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .no-files {
+            text-align: center;
+            color: var(--light-text);
+            padding: 2rem 0;
+        }
+        
+        @media (max-width: 768px) {
+            .file-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .upload-section {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>File Access Pool</h1>
+            <p>Upload and share files anonymously up to 50GB</p>
+        </header>
+        
+        <section class="upload-section">
+            <div class="upload-btn-wrapper">
+                <button class="btn">Upload File</button>
+                <input type="file" id="fileUpload">
+            </div>
+            <div class="file-info">Maximum file size: 50GB</div>
+            
+            <div class="progress-container">
+                <div class="loading-spinner"></div>
+                <div class="progress-bar">
+                    <div class="progress"></div>
+                </div>
+                <div class="progress-text">0%</div>
+            </div>
+        </section>
+        
+        <section class="files-timeline">
+            <div class="timeline-header">
+                <h2>Public Timeline</h2>
+            </div>
+            
+            <div class="file-cards" id="file-list">
+                <div class="no-files">No files have been uploaded yet.</div>
+            </div>
+        </section>
+    </div>
+    
+    <div class="modal" id="download-warning">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚠️ Download Warning</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>You are about to download a file that was uploaded anonymously to File Access Pool. Please be aware of the following:</p>
+                <ul style="margin-top: 1rem; margin-left: 1.5rem;">
+                    <li>Files may contain malicious software</li>
+                    <li>We do not scan uploads for viruses or malware</li>
+                    <li>Download and open files at your own risk</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn">Cancel</button>
+                <button class="confirm-btn">Download Anyway</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const fileUpload = document.getElementById('fileUpload');
+            const progressContainer = document.querySelector('.progress-container');
+            const progress = document.querySelector('.progress');
+            const progressText = document.querySelector('.progress-text');
+            const fileList = document.getElementById('file-list');
+            const loadingSpinner = document.querySelector('.loading-spinner');
+            const modal = document.getElementById('download-warning');
+            const closeBtn = document.querySelector('.close-btn');
+            const cancelBtn = document.querySelector('.cancel-btn');
+            
+            let currentFileId = null;
+            
+            // Fetch files on page load
+            fetchFiles();
+            
+            // File upload event
+            fileUpload.addEventListener('change', function(e) {
+                if (this.files.length === 0) return;
+                
+                const file = this.files[0];
+                const fileSizeGB = file.size / (1024 * 1024 * 1024);
+                
+                if (fileSizeGB > 50) {
+                    alert('File size exceeds the maximum limit of 50GB');
+                    return;
+                }
+                
+                uploadFile(file);
+            });
+            
+            // Upload file function
+            function uploadFile(file) {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Show progress container and loading spinner
+                progressContainer.style.display = 'block';
+                loadingSpinner.style.display = 'block';
+                
+                const xhr = new XMLHttpRequest();
+                
+                xhr.open('POST', '/upload', true);
+                
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progress.style.width = percentComplete + '%';
+                        progressText.textContent = Math.round(percentComplete) + '%';
+                    }
+                };
+                
+                xhr.onload = function() {
+                    loadingSpinner.style.display = 'none';
+                    
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            progressText.textContent = 'Upload complete!';
+                            
+                            // Reset file input and hide progress after 2 seconds
+                            setTimeout(() => {
+                                progressContainer.style.display = 'none';
+                                progress.style.width = '0%';
+                                fileUpload.value = '';
+                                
+                                // Refresh file list
+                                fetchFiles();
+                            }, 2000);
+                        } else {
+                            progressText.textContent = 'Upload failed: ' + response.message;
+                        }
+                    } else {
+                        progressText.textContent = 'Upload failed';
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    loadingSpinner.style.display = 'none';
+                    progressText.textContent = 'Upload failed: Network error';
+                };
+                
+                xhr.send(formData);
+            }
+            
+            // Fetch files function
+            function fetchFiles() {
+                fetch('/files')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            displayFiles(data.files);
+                        } else {
+                            console.error('Failed to fetch files:', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching files:', error);
+                    });
+            }
+            
+            // Display files function
+            function displayFiles(files) {
+                fileList.innerHTML = '';
+                
+                if (files.length === 0) {
+                    fileList.innerHTML = '<div class="no-files">No files have been uploaded yet.</div>';
+                    return;
+                }
+                
+                files.forEach(file => {
+                    const fileCard = document.createElement('div');
+                    fileCard.className = 'file-card';
+                    
+                    // Get file extension for icon
+                    const extension = file.name.split('.').pop().toLowerCase();
+                    let iconClass = '📄';
+                    
+                    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension)) {
+                        iconClass = '🖼️';
+                    } else if (['mp4', 'avi', 'mov', 'wmv', 'flv'].includes(extension)) {
+                        iconClass = '🎬';
+                    } else if (['mp3', 'wav', 'ogg', 'flac'].includes(extension)) {
+                        iconClass = '🎵';
+                    } else if (['pdf'].includes(extension)) {
+                        iconClass = '📕';
+                    } else if (['doc', 'docx'].includes(extension)) {
+                        iconClass = '📝';
+                    } else if (['xls', 'xlsx'].includes(extension)) {
+                        iconClass = '📊';
+                    } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+                        iconClass = '📦';
+                    }
+                    
+                    fileCard.innerHTML = `
+                        <div class="file-icon">${iconClass}</div>
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${formatFileSize(file.size)}</div>
+                        <div class="file-date">Uploaded: ${new Date(file.date).toLocaleString()}</div>
+                        <button class="download-btn" data-id="${file.id}">Download</button>
+                    `;
+                    
+                    fileList.appendChild(fileCard);
+                });
+                
+                // Add download event listeners
+                document.querySelectorAll('.download-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        currentFileId = this.getAttribute('data-id');
+                        modal.style.display = 'flex';
+                    });
+                });
+            }
+            
+            // Format file size
+            function formatFileSize(bytes) {
+                if (bytes < 1024) {
+                    return bytes + ' B';
+                } else if (bytes < 1024 * 1024) {
+                    return (bytes / 1024).toFixed(2) + ' KB';
+                } else if (bytes < 1024 * 1024 * 1024) {
+                    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+                } else {
+                    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+                }
+            }
+            
+            // Modal close button
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            // Modal cancel button
+            cancelBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            // Modal confirm button
+            document.querySelector('.confirm-btn').addEventListener('click', function() {
+                if (currentFileId) {
+                    window.location.href = `/download/${currentFileId}`;
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // Close modal on outside click
+            window.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
